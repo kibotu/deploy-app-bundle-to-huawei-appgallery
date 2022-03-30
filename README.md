@@ -4,9 +4,9 @@ Deploys app bundle to Huawei App Gallery. Jenkins & gradle task based on [Bitris
 
 ### Support
 
-[Jenkins](deploy-bundle-to-huawei-appgallery/Jenkinsfile.groovy)
+[Jenkins](deploy-app-bundle-to-huawei-appgallery/Jenkinsfile.groovy)
 
-[Gradle Module](deploy-bundle-to-huawei-appgallery/build.gradle)
+[Gradle Module](deploy-app-bundle-to-huawei-appgallery/build.gradle)
 
 # Requirements
 
@@ -38,7 +38,7 @@ AAB=$(find "$(pwd -P)" -name "*.aab")
 ##### Jenkins Stage
 
 ```
-def functions = load "deploy-bundle-to-huawei-appgallery/PipelineFunctions.groovy"
+def functions = load "deploy-app-bundle-to-huawei-appgallery/PipelineFunctions.groovy"
 functions.deployBundleToAppGallery(aab, clientId, clientSecret, appId)
 ```
 

@@ -9,7 +9,7 @@ pipeline {
         stage('Prepare') {
             steps {
                 script {
-                    functions = load "deploy-bundle-to-huawei-appgallery/PipelineFunctions.groovy"
+                    functions = load "deploy-app-bundle-to-huawei-appgallery/PipelineFunctions.groovy"
                 }
             }
         }
