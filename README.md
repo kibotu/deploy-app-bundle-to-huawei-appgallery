@@ -13,10 +13,10 @@ Deploys app bundle to Huawei App Gallery. Jenkins & gradle task based on [Bitris
 https://developer.huawei.com/consumer/en/doc/development/AppGallery-connect-Guides/agcapi-getstarted-0000001111845114
 IMPORTANT: when creating api key: 'N/A' as Project
 
-You'll need
-
 **clientId**
+
 **clientSecret**
+
 **appId**
 
 ### How to use
@@ -28,9 +28,9 @@ You'll need
 AAB=$(find "$(pwd -P)" -name "*.aab")
 
 ./gradlew updateAppFileInfo --s  \
-    -Paab=$AAB -PclientId=${huawei_secret_client_id} \
-    -PclientSecret=${huawei_client_secret} \
-    -PappId=${huawei_secret_app_id} \
+    -Paab=$AAB -PclientId=${clientId} \
+    -PclientSecret=${clientSecret} \
+    -PappId=${appId} \
     -PsubmitForReview=false \
     -PreleaseType=1  # 1: on the entire network, 3: by phase
 ```
