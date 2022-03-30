@@ -8,7 +8,7 @@ Deploys app bundle to Huawei App Gallery. Jenkins & gradle task based on [Bitris
 
 [Gradle Module](deploy-app-bundle-to-huawei-appgallery/build.gradle)
 
-# Requirements
+### Requirements
 
 https://developer.huawei.com/consumer/en/doc/development/AppGallery-connect-Guides/agcapi-getstarted-0000001111845114
 
