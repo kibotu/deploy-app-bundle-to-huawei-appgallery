@@ -1,0 +1,183 @@
+import groovy.json.JsonSlurper
+
+ext {
+    def properties = project.gradle.startParameter.projectProperties
+    println(properties)
+
+    // https://developer.huawei.com/consumer/en/doc/development/AppGallery-connect-Guides/agcapi-getstarted-0000001111845114
+    // IMPORTANT: when creating api key: 'N/A' as Project
+
+    // start parameters
+    filePath = properties.getOrDefault("aab", "")
+    clientId = properties.getOrDefault("clientId", "")
+    clientSecret = properties.getOrDefault("clientSecret", "")
+    appId = properties.getOrDefault("appId", "")
+    submitForReview = properties.getOrDefault("submitForReview", "false")
+    releaseType = properties.getOrDefault("releaseType", "1") // 1: on the entire network, 3: by phase
+
+    // internal variables
+    accessToken = ""
+    uploadUrl = ""
+    authCode = ""
+    fileDestUrl = ""
+    fileSize = ""
+}
+
+tasks.register('getToken') {
+    doLast {
+        new ByteArrayOutputStream().withStream { os ->
+            exec {
+                executable "/bin/bash"
+
+                def json = """
+                {
+                    "grant_type" : "client_credentials",
+                    "client_id": "$clientId", 
+                    "client_secret": "$clientSecret"
+                }
+                """.stripMargin().stripIndent()
+
+                def request = "curl -v -X POST https://connect-api.cloud.huawei.com/api/oauth2/v1/token " +
+                        "-H 'Content-Type: application/json' " +
+                        "-H 'cache-control: no-cache' " +
+                        "-d '$json'"
+
+                println("$request")
+
+                args "-c", request
+                standardOutput = os
+            }
+            def response = os.toString()
+            println("$response")
+            def jsonResponse = new JsonSlurper()
+                    .parseText(response)
+            accessToken = jsonResponse.access_token
+        }
+    }
+}
+
+tasks.register('getFileUploadUrl') {
+    dependsOn getToken
+    doLast {
+
+        def fileExtension = filePath.drop(filePath.lastIndexOf('.') + 1)
+
+        new ByteArrayOutputStream().withStream { os ->
+            exec {
+                executable "/bin/bash"
+
+                def request = "curl -v -X GET 'https://connect-api.cloud.huawei.com/api/publish/v2/upload-url?appId=$appId&suffix=$fileExtension&releaseType=$releaseType' " +
+                        "-H 'Authorization: Bearer $accessToken' " +
+                        "-H 'Content-Type: application/json' " +
+                        "-H 'client_id: $clientId'"
+
+                println("$request")
+
+                args "-c", request
+                standardOutput = os
+            }
+            def response = os.toString()
+            println("$response")
+            def jsonResponse = new JsonSlurper()
+                    .parseText(response)
+            uploadUrl = jsonResponse.uploadUrl
+            authCode = jsonResponse.authCode
+        }
+    }
+}
+
+tasks.register('uploadFile') {
+    dependsOn getFileUploadUrl
+    doLast {
+        new ByteArrayOutputStream().withStream { os ->
+            def request = exec {
+                executable "/bin/bash"
+
+                def request = "curl -v -X POST '$uploadUrl' " +
+                        "-H 'Accept: application/json' " +
+                        "-F 'authCode=$authCode' " +
+                        "-F 'fileCount=1' " +
+                        "-F 'parseType=1' " +
+                        "-F 'file=@\"${filePath}\"'"
+                println("$request")
+
+                args "-c", request
+                standardOutput = os
+            }
+            println("request=$request")
+            def response = os.toString()
+            println("$response")
+            def jsonResponse = new JsonSlurper()
+                    .parseText(os.toString())
+            def fileInfoList = jsonResponse.result.UploadFileRsp.fileInfoList[0]
+            fileDestUrl = fileInfoList.fileDestUlr
+            fileSize = fileInfoList.size
+        }
+    }
+}
+
+tasks.register('updateAppFileInfo') {
+    dependsOn uploadFile
+    doLast {
+        new ByteArrayOutputStream().withStream { os ->
+            exec {
+                executable "/bin/bash"
+
+                def fileName = new File(filePath).name
+
+                def json = """
+                {
+                  "fileType": "5",
+                  "files": [
+                    {
+                      "fileName": "$fileName",
+                      "fileDestUrl": "$fileDestUrl",
+                      "size": "$fileSize"
+                    }
+                  ]
+                }
+                """.stripMargin().stripIndent()
+
+                def request = "curl -X PUT 'https://connect-api.cloud.huawei.com/api/publish/v2/app-file-info?appId=$appId' " +
+                        "-H 'Authorization: Bearer $accessToken' " +
+                        "-H 'Content-Type: application/json' " +
+                        "-H 'releaseType: $releaseType' " +
+                        "-H 'client_id: $clientId' " +
+                        "-d '$json'"
+
+                println("$request")
+
+                args "-c", request
+                standardOutput = os
+            }
+            def response = os.toString()
+            println("$response")
+            def jsonResponse = new JsonSlurper()
+                    .parseText(response)
+        }
+    }
+}
+
+tasks.register('submitAppDirectly') {
+    dependsOn getFileUploadUrl
+    doLast {
+        new ByteArrayOutputStream().withStream { os ->
+            exec {
+                executable "/bin/bash"
+
+                def request = "curl -X POST https://connect-api.cloud.huawei.com/api/publish/v2/app-submit?appid=$appId " +
+                        "-H 'Authorization: Bearer $accessToken' " +
+                        "-H 'client_id: $clientId'"
+
+                println(request)
+
+                args "-c", request
+                standardOutput = os
+            }
+            def response = os.toString()
+            println("$response")
+            def jsonResponse = new JsonSlurper()
+                    .parseText(response)
+        }
+    }
+}
